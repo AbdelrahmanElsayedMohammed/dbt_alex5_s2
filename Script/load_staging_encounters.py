@@ -22,7 +22,7 @@ Rows are sent as JSON and unpacked with OPENJSON, which needs SQL Server compati
 level 130 or higher.
 
 Connection details come from the same environment variables as profiles.yml:
-    server_address, server_user_name, server_password
+    DBT_SQLSERVER_HOST, DBT_SQLSERVER_USER, DBT_SQLSERVER_PASSWORD
 
 Usage (from the repository root, with .venv-dbt activated):
     python scripts/load_staging_encounters.py --limit 1000   # quick test run
@@ -46,8 +46,8 @@ import pyodbc
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-DATABASE = "Abdelrahman_E_Mohammed"  # must match the database in profiles.yml
-SCHEMA = "staging"  # must match the schema in profiles.yml
+DATABASE = "Abdelrahman_E_Mohammed"
+SCHEMA = "staging"
 TABLE = "encounters"
 KEY_COLUMN = "encounter_id"
 COLUMN_TYPE_LENGTH = 255  # longest value in the file is 58 characters
@@ -62,22 +62,21 @@ def quote(name: str) -> str:
     return "[" + name.replace("]", "]]") + "]"
 
 
-def odbc_value(value: str) -> str:
-    return "{" + value.replace("}", "}}") + "}"
-
-
 def connect() -> pyodbc.Connection:
-    required = ("server_address", "server_user_name", "server_password")
-    missing = [name for name in required if not os.environ.get(name)]
+    missing = [
+        name
+        for name in ("DBT_SQLSERVER_HOST", "DBT_SQLSERVER_USER", "DBT_SQLSERVER_PASSWORD")
+        if not os.environ.get(name)
+    ]
     if missing:
         sys.exit(f"Missing environment variables: {', '.join(missing)}")
 
     conn_str = (
         "DRIVER={ODBC Driver 18 for SQL Server};"
-        f"SERVER={odbc_value(os.environ['server_address'] + ',1433')};"
-        f"DATABASE={odbc_value(DATABASE)};"
-        f"UID={odbc_value(os.environ['server_user_name'])};"
-        f"PWD={odbc_value(os.environ['server_password'])};"
+        f"SERVER={os.environ['server_address']},1433;"
+        f"DATABASE={DATABASE};"
+        f"UID={os.environ['server_user_name']};"
+        f"PWD={{{os.environ['server_password'].replace('}', '}}')}}};"
         "Encrypt=yes;TrustServerCertificate=yes;"
     )
     return pyodbc.connect(conn_str, timeout=30)
