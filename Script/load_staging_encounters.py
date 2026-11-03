@@ -22,7 +22,7 @@ Rows are sent as JSON and unpacked with OPENJSON, which needs SQL Server compati
 level 130 or higher.
 
 Connection details come from the same environment variables as profiles.yml:
-    DBT_SQLSERVER_HOST, DBT_SQLSERVER_USER, DBT_SQLSERVER_PASSWORD
+    server_address, server_user_name, server_password
 
 Usage (from the repository root, with .venv-dbt activated):
     python scripts/load_staging_encounters.py --limit 1000   # quick test run
@@ -67,17 +67,17 @@ def odbc_value(value: str) -> str:
 
 
 def connect() -> pyodbc.Connection:
-    required = ("DBT_SQLSERVER_HOST", "DBT_SQLSERVER_USER", "DBT_SQLSERVER_PASSWORD")
+    required = ("server_address", "server_user_name", "server_password")
     missing = [name for name in required if not os.environ.get(name)]
     if missing:
         sys.exit(f"Missing environment variables: {', '.join(missing)}")
 
     conn_str = (
         "DRIVER={ODBC Driver 18 for SQL Server};"
-        f"SERVER={odbc_value(os.environ['DBT_SQLSERVER_HOST'] + ',1433')};"
+        f"SERVER={odbc_value(os.environ['server_address'] + ',1433')};"
         f"DATABASE={odbc_value(DATABASE)};"
-        f"UID={odbc_value(os.environ['DBT_SQLSERVER_USER'])};"
-        f"PWD={odbc_value(os.environ['DBT_SQLSERVER_PASSWORD'])};"
+        f"UID={odbc_value(os.environ['server_user_name'])};"
+        f"PWD={odbc_value(os.environ['server_password'])};"
         "Encrypt=yes;TrustServerCertificate=yes;"
     )
     return pyodbc.connect(conn_str, timeout=30)
